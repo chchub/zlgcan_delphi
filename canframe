@@ -40,7 +40,8 @@ CAN_ERR_MASK=$1FFFFFFF;
 // In line functions
 function MAKE_CAN_ID(id, eff, rtr, err: Dword):DWord;
 begin
-  result :=  id or ( not (eff) shl 31) or ( not (rtr) shl 30) or ( not (err) shl 29);
+  result :=  id or (eff shl 31) or (rtr shl 30) or (err shl 29);
+  //result :=  id or ( not (eff) shl 31) or ( not (rtr) shl 30) or ( not (err) shl 29);
 end;
  //id | (!!(eff) << 31) | (!!(rtr) << 30) | (!!(err) << 29)
 function IS_EFF(id: Dword):DWord;
