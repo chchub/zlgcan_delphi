@@ -1,0 +1,289 @@
+// zlgcan_wrap.cpp : 定义 DLL 应用程序的导出函数。
+//
+
+#include "stdafx.h"
+#include "zlgcan_wrap.h"
+#include <stdio.h>
+#include <canhandle.h>
+
+//CANFD仲裁域波特率
+UINT FUNC_CALL ZCAN_SetCanfdAbitBaudrate( DEVICE_HANDLE hDev, UINT channelIdx, UINT abitBaudrate)
+{
+	char path[50] = {0};
+	char value[50] = {0};
+	sprintf_s(path, "%d/canfd_abit_baud_rate", channelIdx);
+	sprintf_s(value, "%d", abitBaudrate);
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+	if (0 == property_->SetValue(path, value))
+	{
+		return STATUS_ERR;
+	}
+
+	return STATUS_OK;
+}
+
+//CANFD数据域波特率
+UINT FUNC_CALL ZCAN_SetCanfdDbitBaudrate(DEVICE_HANDLE hDev, UINT channelIdx, UINT dbitBaudrate)
+{
+	char path[50] = { 0 };
+	char value[50] = { 0 };
+	sprintf_s(path, "%d/canfd_dbit_baud_rate", channelIdx);
+	sprintf_s(value, "%d", dbitBaudrate);
+	IProperty* property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+	if (0 == property_->SetValue(path, value))
+	{
+		return STATUS_ERR;
+	}
+
+	return STATUS_OK;
+}
+
+//自定义波特率
+UINT FUNC_CALL ZCAN_SetBaudRateCustom(DEVICE_HANDLE hDev, UINT channelIdx, UINT RateCustom)
+{
+	char path[50] = { 0 };
+	char value[50] = { 0 };
+	sprintf_s(path, "%d/baud_rate_custom", channelIdx);
+	sprintf_s(value, "%d", RateCustom);
+	IProperty* property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+	if (0 == property_->SetValue(path, value))
+	{
+		return STATUS_ERR;
+	}
+
+	return STATUS_OK;
+}
+
+UINT FUNC_CALL ZCAN_SetCANFDStandard( DEVICE_HANDLE hDev, UINT channelIdx, int canfd_standard )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/canfd_standard", channelIdx);
+	char value[10] = {0};
+	sprintf_s(value, "%d", canfd_standard);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) { 
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+
+UINT FUNC_CALL ZCAN_SetAutoSend( DEVICE_HANDLE hDev, UINT channelIdx, ZCAN_AUTO_TRANSMIT_OBJ *pData )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/auto_send", channelIdx);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	UINT ret = STATUS_ERR;
+	ret = property_->SetValue(path, (char*)pData);
+	if (ret != STATUS_OK) {
+		return ret;
+	}
+
+	// USBCANFD需要使能定时发送生效，PCIECANFD不需要使能
+	CAN_HANDLE can;
+	can.handle = (UINT)hDev;
+	if (can.device_type == ZCAN_USBCANFD_100U || can.device_type == ZCAN_USBCANFD_200U || can.device_type == ZCAN_USBCANFD_MINI) {
+		sprintf_s(path, "%d/apply_auto_send", channelIdx);
+		ret = property_->SetValue(path, "0");
+		if (ret != STATUS_OK) {
+			return ret;
+		}
+	}
+
+	return STATUS_OK;
+}
+
+UINT FUNC_CALL ZCAN_SetAutoSendFD( DEVICE_HANDLE hDev, UINT channelIdx, ZCANFD_AUTO_TRANSMIT_OBJ *pData )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/auto_send_canfd", channelIdx);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	UINT ret = STATUS_ERR;
+	ret = property_->SetValue(path, (char*)pData);
+	if (ret != STATUS_OK) {
+		return ret;
+	}
+
+	// USBCANFD需要使能定时发送生效，PCIECANFD不需要使能
+	CAN_HANDLE can;
+	can.handle = (UINT)hDev;
+	if (can.device_type == ZCAN_USBCANFD_100U || can.device_type == ZCAN_USBCANFD_200U || can.device_type == ZCAN_USBCANFD_MINI) {
+		sprintf_s(path, "%d/apply_auto_send", channelIdx);
+		ret = property_->SetValue(path, "0");
+		if (ret != STATUS_OK) {
+			return ret;
+		}
+	}
+
+	return STATUS_OK;
+}
+
+UINT FUNC_CALL ZCAN_ClearAutoSend( DEVICE_HANDLE hDev, UINT channelIdx )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/clear_auto_send", channelIdx);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, "0");
+}
+
+UINT FUNC_CALL ZCLOUD_GetDevices(ZCLOUD_DEV_NEW *pDevices, UINT size)
+{
+	if (!ZCLOUD_IsConnected()) {
+		return 0;
+	}
+
+	const ZCLOUD_USER_DATA *data = ZCLOUD_GetUserData();
+	if (!data) {
+		return 0;
+	}
+
+	UINT devCount = 0;
+	for (UINT i=0; i<data->devCnt; i++) {
+        const ZCLOUD_DEVINFO *pDev = &data->devices[i];
+        if (pDev && devCount < size) {
+            ZCLOUD_DEV_NEW *newDev = &pDevices[devCount++];
+            memset(newDev, 0, sizeof(ZCLOUD_DEV_NEW));
+            newDev->devIndex = pDev->devIndex;
+            memcpy(newDev->type, pDev->type, sizeof(newDev->type));
+            memcpy(newDev->model, pDev->model, sizeof(newDev->model));
+            newDev->status = pDev->status;
+            memcpy(newDev->bCanUploads, pDev->bCanUploads, sizeof(newDev->bCanUploads));
+            newDev->canNum = pDev->canNum;
+            newDev->bGpsUpload = pDev->bGpsUpload;
+        }
+	}
+	
+	return devCount;
+}
+
+UINT FUNC_CALL ZCAN_SetResistanceEnable( DEVICE_HANDLE hDev, UINT channelIdx, int enable )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/initenal_resistance", channelIdx);
+	char value[10] = {0};
+	sprintf_s(value, "%d", enable);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+
+UINT FUNC_CALL ZCAN_PCIeSetSendType( DEVICE_HANDLE hDev, UINT channelIdx, int send_type )
+{
+	char path[50] = {0};
+	sprintf_s(path, "%d/send_type", channelIdx);
+	char value[10] = {0};
+	sprintf_s(value, "%d", send_type);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+//清除滤波
+UINT FUNC_CALL ZCAN_filterClear(DEVICE_HANDLE hDev, UINT channelIdx, int clear)
+{
+	char path[50] = { 0 };
+	sprintf_s(path, "%d/filter_clear", channelIdx);
+	char value[10] = { 0 };
+	sprintf_s(value, "%d", clear);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+//滤波生效
+UINT FUNC_CALL ZCAN_filterAck(DEVICE_HANDLE hDev, UINT channelIdx,int ack)
+{
+	char path[50] = { 0 };
+	sprintf_s(path, "%d/filter_ack", channelIdx);
+	char value[10] = { 0 };
+	sprintf_s(value, "%d", ack);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+
+//滤波模式
+UINT FUNC_CALL ZCAN_filterMode(DEVICE_HANDLE hDev, UINT channelIdx, int send_type)
+{
+	char path[50] = { 0 };
+	sprintf_s(path, "%d/filter_mode", channelIdx);
+	char value[10] = { 0 };
+	sprintf_s(value, "%d", send_type);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+//滤波起始帧
+UINT FUNC_CALL ZCAN_filterStart(DEVICE_HANDLE hDev, UINT channelIdx, char* filter_start)
+{
+	char path[50] = { 0 };
+	sprintf_s(path, "%d/filter_start", channelIdx);
+	char value[20] = { 0 };
+	sprintf_s(value, "%s", filter_start);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
+
+//滤波结束帧
+UINT FUNC_CALL ZCAN_filterEnd(DEVICE_HANDLE hDev, UINT channelIdx, char* filter_end)
+{
+	char path[50] = { 0 };
+	sprintf_s(path, "%d/filter_end", channelIdx);
+	char value[20] = { 0 };
+	sprintf_s(value, "%s", filter_end);
+
+	IProperty *property_ = GetIProperty(hDev);
+	if (!property_) {
+		return STATUS_ERR;
+	}
+
+	return property_->SetValue(path, value);
+}
